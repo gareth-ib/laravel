@@ -7,12 +7,12 @@
 
 namespace Reliese\Coders\Model;
 
+use Illuminate\Database\DatabaseManager;
+use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Str;
 use Reliese\Meta\Blueprint;
-use Reliese\Support\Classify;
 use Reliese\Meta\SchemaManager;
-use Illuminate\Filesystem\Filesystem;
-use Illuminate\Database\DatabaseManager;
+use Reliese\Support\Classify;
 
 class Factory
 {
@@ -133,7 +133,11 @@ class Factory
 
         foreach ($mapper->tables() as $blueprint) {
             if ($this->shouldTakeOnly($blueprint) && $this->shouldNotExclude($blueprint)) {
-                $this->create($mapper->schema(), $blueprint->table());
+                try {
+                    $this->create($mapper->schema(), $blueprint->table());
+                } catch (\Throwable $e) {
+                    $this->info("\n WARNING: Could not create model for ".$blueprint->table().' because '.$e->getMessage()."\n");
+                }
             }
         }
     }
@@ -453,6 +457,7 @@ class Factory
         // When table is not plural, append the table name
         if ($model->needsTableName()) {
             $body .= $this->class->field('table', $model->getTableForQuery());
+            $body .= $this->class->constant('TABLE', $model->getTableForQuery());
         }
 
         if ($model->hasCustomPrimaryKey()) {
